@@ -143,7 +143,7 @@ export default function FileUpload({
           <p className="text-xs text-gray-400">
             Supports: PDF, PowerPoint (.ppt, .pptx), Word (.doc, .docx)
           </p>
-          <p className="text-xs text-gray-400">Maximum file size: 10 MB</p>
+          <p className="text-xs text-gray-400">Maximum file size: 100 MB</p>
         </div>
       </div>
 

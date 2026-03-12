@@ -22,9 +22,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!format || !["cornell", "bullet", "flashcards"].includes(format)) {
+    if (!format || !["cornell", "bullet", "flashcards", "study-guide", "flowchart", "mindmap"].includes(format)) {
       return NextResponse.json(
-        { error: "Format must be one of: cornell, bullet, flashcards" },
+        { error: "Format must be one of: cornell, bullet, flashcards, study-guide, flowchart, mindmap" },
         { status: 400 }
       );
     }

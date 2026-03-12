@@ -1,6 +1,6 @@
 import { parseOfficeAsync } from "officeparser";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB in bytes
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB in bytes
 
 const SUPPORTED_MIME_TYPES = [
   "application/pdf",
@@ -19,7 +19,7 @@ export async function extractTextFromFile(file: File): Promise<string> {
   // Validate file size
   if (file.size > MAX_FILE_SIZE) {
     throw new Error(
-      `File size exceeds 10 MB limit. Your file is ${(file.size / (1024 * 1024)).toFixed(1)} MB.`
+      `File size exceeds 100 MB limit. Your file is ${(file.size / (1024 * 1024)).toFixed(1)} MB.`
     );
   }
 

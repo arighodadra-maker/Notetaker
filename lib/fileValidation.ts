@@ -1,7 +1,7 @@
 // Client-side file validation utilities
 // This file does NOT import officeparser, so it's safe for browser use
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB in bytes
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB in bytes
 
 const SUPPORTED_EXTENSIONS = [".pdf", ".ppt", ".pptx", ".doc", ".docx"];
 
@@ -22,7 +22,7 @@ export function validateFile(file: File): { valid: boolean; error?: string } {
   if (file.size > MAX_FILE_SIZE) {
     return {
       valid: false,
-      error: `File size exceeds 10 MB limit (${formatFileSize(file.size)})`,
+      error: `File size exceeds 100 MB limit (${formatFileSize(file.size)})`,
     };
   }
 

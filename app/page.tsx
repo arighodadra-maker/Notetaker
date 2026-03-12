@@ -3,15 +3,37 @@
 import { useState } from "react";
 import { NoteFormat } from "@/lib/prompts";
 import FileUpload from "@/components/FileUpload";
+import MarkdownRenderer from "@/components/MarkdownRenderer";
+import CalendarView from "@/components/calendar/CalendarView";
+import QuizView from "@/components/quiz/QuizView";
+import { useTheme } from "@/components/ThemeProvider";
 
 type InputMode = "text" | "file";
 
+const FORMAT_OPTIONS: { value: NoteFormat; label: string }[] = [
+  { value: "bullet", label: "Bullet Points" },
+  { value: "cornell", label: "Cornell Notes" },
+  { value: "flashcards", label: "Flashcards" },
+  { value: "study-guide", label: "Study Guide" },
+  { value: "flowchart", label: "Flowchart" },
+  { value: "mindmap", label: "Mind Map" },
+  { value: "diagrams", label: "Flowchart + Mind Map" },
+];
+
+const OUTPUT_TABS = [
+  { key: "notes", label: "Notes" },
+  { key: "calendar", label: "Study Calendar" },
+  { key: "quiz", label: "Quiz" },
+] as const;
+
+const isDiagram = (f: NoteFormat) =>
+  f === "flowchart" || f === "mindmap" || f === "diagrams";
+
 export default function Home() {
-  // Input mode state
+  const { theme, toggleTheme } = useTheme();
+
   const [inputMode, setInputMode] = useState<InputMode>("text");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-
-  // Existing state
   const [transcript, setTranscript] = useState("");
   const [format, setFormat] = useState<NoteFormat>("bullet");
   const [notes, setNotes] = useState("");
@@ -19,27 +41,28 @@ export default function Home() {
   const [extracting, setExtracting] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState<"notes" | "calendar" | "quiz">("notes");
+  const [converting, setConverting] = useState(false);
 
   const handleModeSwitch = (mode: InputMode) => {
     setInputMode(mode);
     setError("");
-    // Clear the non-active input
-    if (mode === "text") {
-      setSelectedFile(null);
-    } else {
-      setTranscript("");
-    }
+    if (mode === "text") setSelectedFile(null);
+    else setTranscript("");
+  };
+
+  const handleFormatChange = (f: NoteFormat) => {
+    setFormat(f);
+    setNotes("");
   };
 
   const handleGenerate = async () => {
-    // Validate input based on mode
     if (inputMode === "text" && !transcript.trim()) {
-      setError("Please enter a transcript");
+      setError("Please enter a transcript.");
       return;
     }
-
     if (inputMode === "file" && !selectedFile) {
-      setError("Please select a file to upload");
+      setError("Please select a file.");
       return;
     }
 
@@ -50,44 +73,31 @@ export default function Home() {
     let transcriptText = transcript;
 
     try {
-      // If file mode, extract text first
       if (inputMode === "file" && selectedFile) {
         setExtracting(true);
-
         const formData = new FormData();
         formData.append("file", selectedFile);
-
-        const extractResponse = await fetch("/api/extract", {
-          method: "POST",
-          body: formData,
-        });
-
+        const extractResponse = await fetch("/api/extract", { method: "POST", body: formData });
         const extractData = await extractResponse.json();
-
-        if (!extractResponse.ok) {
-          throw new Error(extractData.error || "Failed to extract text");
-        }
-
+        if (!extractResponse.ok) throw new Error(extractData.error || "Failed to extract text");
         transcriptText = extractData.transcript;
         setExtracting(false);
       }
 
-      // Format the transcript into notes
-      const response = await fetch("/api/format", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ transcript: transcriptText, format }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to generate notes");
+      if (format === "diagrams") {
+        const [flowRes, mindRes] = await Promise.all([
+          fetch("/api/format", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ transcript: transcriptText, format: "flowchart" }) }),
+          fetch("/api/format", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ transcript: transcriptText, format: "mindmap" }) }),
+        ]);
+        const [flowData, mindData] = await Promise.all([flowRes.json(), mindRes.json()]);
+        if (!flowRes.ok || !mindRes.ok) throw new Error(flowData.error || mindData.error || "Failed to generate diagrams");
+        setNotes(JSON.stringify({ flowchart: flowData.notes, mindmap: mindData.notes }));
+      } else {
+        const response = await fetch("/api/format", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ transcript: transcriptText, format }) });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Failed to generate notes");
+        setNotes(data.notes);
       }
-
-      setNotes(data.notes);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -98,192 +108,221 @@ export default function Home() {
 
   const handleCopy = async () => {
     if (!notes) return;
-
     try {
       await navigator.clipboard.writeText(notes);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
+    } catch {
       setError("Failed to copy to clipboard");
     }
   };
 
-  const isGenerateDisabled =
-    loading ||
-    extracting ||
-    (inputMode === "text" ? !transcript.trim() : !selectedFile);
-
-  const getButtonText = () => {
-    if (extracting) return "Extracting text...";
-    if (loading) return "Generating notes...";
-    return "Generate Notes";
+  const handleConvertToStudyGuide = async () => {
+    setConverting(true);
+    setError("");
+    try {
+      const response = await fetch("/api/convert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes, fromFormat: format, toFormat: "study-guide" }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to convert notes");
+      setNotes(data.notes);
+      setFormat("study-guide");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Conversion failed");
+    } finally {
+      setConverting(false);
+    }
   };
 
+  const isGenerateDisabled = loading || extracting || (inputMode === "text" ? !transcript.trim() : !selectedFile);
+
+  const busyLabel = extracting ? "Extracting…" : "Generating…";
+
   return (
-    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-[800px] mx-auto">
-        {/* Header */}
-        <header className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">NotesAI</h1>
-          <p className="text-lg text-gray-600">
-            Transform your lecture transcripts and documents into beautifully
-            formatted notes
-          </p>
-        </header>
-
-        {/* Error Banner */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
-            <p className="font-medium">Error: {error}</p>
-          </div>
-        )}
-
-        {/* Input Section */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          {/* Tab Switcher */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Lecture Transcript
-            </label>
-            <div className="flex border-b border-gray-200">
-              <button
-                onClick={() => handleModeSwitch("text")}
-                disabled={loading || extracting}
-                className={`
-                  px-6 py-2 text-sm font-medium transition-all duration-200 border-b-2 -mb-px
-                  ${
-                    inputMode === "text"
-                      ? "border-primary text-primary"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }
-                  ${loading || extracting ? "opacity-50 cursor-not-allowed" : ""}
-                `}
-              >
-                Text Input
-              </button>
-              <button
-                onClick={() => handleModeSwitch("file")}
-                disabled={loading || extracting}
-                className={`
-                  px-6 py-2 text-sm font-medium transition-all duration-200 border-b-2 -mb-px
-                  ${
-                    inputMode === "file"
-                      ? "border-primary text-primary"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }
-                  ${loading || extracting ? "opacity-50 cursor-not-allowed" : ""}
-                `}
-              >
-                Upload File
-              </button>
-            </div>
-          </div>
-
-          {/* Text Input Mode */}
-          {inputMode === "text" && (
-            <div className="mb-4">
-              <textarea
-                id="transcript"
-                value={transcript}
-                onChange={(e) => setTranscript(e.target.value)}
-                placeholder="Paste your lecture transcript here..."
-                rows={10}
-                disabled={loading || extracting}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-y min-h-[200px] bg-gray-50 disabled:opacity-50"
-              />
-            </div>
+    <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-white transition-colors duration-200">
+      {/* Nav */}
+      <nav className="border-b border-gray-100 dark:border-gray-800 px-6 py-4 flex items-center justify-between">
+        <span className="text-base font-semibold tracking-tight">NotesAI</span>
+        <button
+          onClick={toggleTheme}
+          className="p-2 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          aria-label="Toggle theme"
+        >
+          {theme === "light" ? (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="5" />
+              <line x1="12" y1="1" x2="12" y2="3" />
+              <line x1="12" y1="21" x2="12" y2="23" />
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+              <line x1="1" y1="12" x2="3" y2="12" />
+              <line x1="21" y1="12" x2="23" y2="12" />
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+            </svg>
           )}
+        </button>
+      </nav>
 
-          {/* File Upload Mode */}
-          {inputMode === "file" && (
-            <div className="mb-4">
-              <FileUpload
-                onFileSelect={setSelectedFile}
-                disabled={loading || extracting}
-                selectedFile={selectedFile}
-              />
-            </div>
-          )}
-
-          {/* Format Selector */}
-          <div className="mb-6">
-            <label
-              htmlFor="format"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Format
-            </label>
-            <select
-              id="format"
-              value={format}
-              onChange={(e) => setFormat(e.target.value as NoteFormat)}
-              disabled={loading || extracting}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white disabled:opacity-50"
-            >
-              <option value="bullet">Bullet Points</option>
-              <option value="cornell">Cornell Notes</option>
-              <option value="flashcards">Flashcards</option>
-            </select>
-          </div>
-
-          {/* Generate Button */}
-          <button
-            onClick={handleGenerate}
-            disabled={isGenerateDisabled}
-            className="w-full bg-primary hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center"
-          >
-            {loading || extracting ? (
-              <>
-                <svg
-                  className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                {getButtonText()}
-              </>
-            ) : (
-              "Generate Notes"
-            )}
-          </button>
+      <main className={`mx-auto px-6 py-10 transition-all duration-300 ${format === "diagrams" ? "max-w-5xl" : "max-w-2xl"}`}>
+        {/* Hero */}
+        <div className="mb-8">
+          <h1 className="text-2xl font-semibold tracking-tight mb-1">Generate notes</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Paste a transcript or upload a file — get structured notes instantly.</p>
         </div>
 
-        {/* Output Section */}
-        {notes && (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Generated Notes
-              </h2>
+        {/* Error */}
+        {error && (
+          <div className="mb-6 px-4 py-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-400">
+            {error}
+          </div>
+        )}
+
+        {/* Input card */}
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden mb-3">
+          {/* Mode toggle */}
+          <div className="flex border-b border-gray-200 dark:border-gray-800">
+            {(["text", "file"] as InputMode[]).map((mode) => (
               <button
-                onClick={handleCopy}
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors duration-200 text-sm"
+                key={mode}
+                onClick={() => handleModeSwitch(mode)}
+                disabled={loading || extracting}
+                className={`px-5 py-3 text-sm font-medium transition-colors disabled:opacity-40 ${
+                  inputMode === mode
+                    ? "text-gray-900 dark:text-white bg-white dark:bg-gray-900 border-b-2 border-blue-500"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 bg-gray-50 dark:bg-gray-900/50"
+                }`}
               >
-                {copied ? "Copied!" : "Copy to Clipboard"}
+                {mode === "text" ? "Text" : "Upload file"}
               </button>
+            ))}
+          </div>
+
+          {/* Input area */}
+          <div className="bg-white dark:bg-gray-900">
+            {inputMode === "text" ? (
+              <textarea
+                value={transcript}
+                onChange={(e) => setTranscript(e.target.value)}
+                placeholder="Paste your lecture transcript here…"
+                rows={9}
+                disabled={loading || extracting}
+                className="w-full px-5 py-4 text-sm bg-transparent resize-y min-h-[200px] placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none disabled:opacity-50"
+              />
+            ) : (
+              <div className="px-5 py-4">
+                <FileUpload onFileSelect={setSelectedFile} disabled={loading || extracting} selectedFile={selectedFile} />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Format chips */}
+        <div className="mb-4">
+          <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Format</p>
+          <div className="flex flex-wrap gap-2">
+            {FORMAT_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => handleFormatChange(opt.value)}
+                disabled={loading || extracting}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors disabled:opacity-40 ${
+                  format === opt.value
+                    ? "bg-blue-500 text-white"
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Generate */}
+        <button
+          onClick={handleGenerate}
+          disabled={isGenerateDisabled}
+          className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed text-white text-sm font-semibold py-3 px-6 rounded-xl transition-colors mb-10"
+        >
+          {(loading || extracting) && (
+            <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+          )}
+          {loading || extracting ? busyLabel : "Generate"}
+        </button>
+
+        {/* Output */}
+        {notes && (
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+            {/* Output header */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+              {/* Tabs */}
+              <div className="flex gap-1">
+                {OUTPUT_TABS.map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                      activeTab === tab.key
+                        ? "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm"
+                        : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-2">
+                {format !== "study-guide" && !isDiagram(format) && (
+                  <button
+                    onClick={handleConvertToStudyGuide}
+                    disabled={converting}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {converting && (
+                      <svg className="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    )}
+                    {converting ? "Converting…" : "→ Study Guide"}
+                  </button>
+                )}
+                {!isDiagram(format) && (
+                  <button
+                    onClick={handleCopy}
+                    className="px-3 py-1.5 rounded-md text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    {copied ? "Copied" : "Copy"}
+                  </button>
+                )}
+              </div>
             </div>
-            <div className="prose prose-sm max-w-none bg-gray-50 p-4 rounded-lg border border-gray-200 overflow-x-auto">
-              <pre className="whitespace-pre-wrap font-sans text-gray-800">
-                {notes}
-              </pre>
+
+            {/* Tab content */}
+            <div className="bg-white dark:bg-gray-900">
+              {activeTab === "notes" && (
+                <div className="p-5 overflow-x-auto">
+                  <MarkdownRenderer content={notes} format={format} />
+                </div>
+              )}
+              {activeTab === "calendar" && <CalendarView notes={notes} format={format} />}
+              {activeTab === "quiz" && <QuizView notes={notes} />}
             </div>
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }
