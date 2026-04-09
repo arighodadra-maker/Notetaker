@@ -13,6 +13,7 @@ import Dashboard from "@/components/Dashboard";
 import VideoUpload from "@/components/VideoUpload";
 import SessionDrawer from "@/components/SessionDrawer";
 import { extractAudio } from "@/lib/audioExtractor";
+import { extractTextFromPdf } from "@/lib/pdfExtractor";
 import { useAuth } from "@/components/AuthProvider";
 import { saveSession, Session } from "@/lib/sessions";
 
@@ -116,12 +117,20 @@ export default function Home() {
           transcriptText = cached;
         } else {
           setExtracting(true);
-          const fd = new FormData();
-          fd.append("file", selectedFile);
-          const res = await fetch("/api/extract", { method: "POST", body: fd });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || "Failed to extract text");
-          transcriptText = data.transcript;
+          const isPdf = selectedFile.name.toLowerCase().endsWith(".pdf") ||
+            selectedFile.type === "application/pdf";
+          if (isPdf) {
+            // Extract client-side — no upload, no size limit
+            transcriptText = await extractTextFromPdf(selectedFile);
+          } else {
+            // Word / PowerPoint — server-side (files are typically small)
+            const fd = new FormData();
+            fd.append("file", selectedFile);
+            const res = await fetch("/api/extract", { method: "POST", body: fd });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || (res.status === 413 ? "File too large (max ~4 MB). Try pasting the text directly." : "Failed to extract text"));
+            transcriptText = data.transcript;
+          }
           transcriptCache.current.set(key, transcriptText);
           setExtracting(false);
         }
@@ -141,8 +150,8 @@ export default function Home() {
             const fd = new FormData();
             fd.append("file", new File([chunks[i]], `audio_${i}.wav`, { type: "audio/wav" }));
             const res = await fetch("/api/transcribe", { method: "POST", body: fd });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "Failed to transcribe video");
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || (res.status === 413 ? "Audio chunk too large — try a shorter video" : "Failed to transcribe video"));
             parts.push(data.transcript);
           }
           transcriptText = parts.join(" ");

@@ -10,10 +10,12 @@
  */
 
 const TARGET_SAMPLE_RATE = 16_000; // Hz — Whisper's native rate
-const MAX_WAV_BYTES = 24 * 1024 * 1024; // 24 MB — safe headroom under 25 MB cap
+// Vercel serverless functions cap request bodies at 4.5 MB.
+// 4 MB / (16000 samples/s × 2 bytes) = ~131 s ≈ 2 min per chunk (safe headroom).
+const MAX_WAV_BYTES = 4 * 1024 * 1024; // 4 MB
 
 // Max audio samples per chunk at 16 kHz 16-bit mono:
-// (24 MB - 44 byte header) / 2 bytes per sample ≈ 12,582,890 samples ≈ ~786 seconds (~13 min)
+// (4 MB - 44 byte header) / 2 bytes per sample ≈ 2,097,130 samples ≈ ~131 seconds (~2 min)
 const MAX_SAMPLES_PER_CHUNK = Math.floor((MAX_WAV_BYTES - 44) / 2);
 const MAX_SECONDS_PER_CHUNK = MAX_SAMPLES_PER_CHUNK / TARGET_SAMPLE_RATE;
 

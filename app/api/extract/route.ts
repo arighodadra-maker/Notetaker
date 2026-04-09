@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { extractTextFromFile } from "@/lib/fileExtractor";
 
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   try {
     // Parse FormData from the request
