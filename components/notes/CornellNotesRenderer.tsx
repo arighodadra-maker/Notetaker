@@ -17,18 +17,31 @@ interface CornellSections {
 export default function CornellNotesRenderer({
   content,
 }: CornellNotesRendererProps) {
-  // Pre-process markdown to extract sections
+  // Pre-process markdown to extract sections.
+  // Tolerates any heading level (##/###), any casing, and any ordering.
   const sections = useMemo<CornellSections>(() => {
-    const cuesMatch = content.match(
-      /## Cues\s+([\s\S]*?)(?=## Notes|### Summary|$)/
-    );
-    const notesMatch = content.match(/## Notes\s+([\s\S]*?)(?=### Summary|$)/);
-    const summaryMatch = content.match(/### Summary\s+([\s\S]*?)$/);
+    // Split on any markdown heading that contains our section keywords.
+    const sectionPattern = /^#{1,6}\s+(.+)$/gm;
+    const headings: { name: string; index: number }[] = [];
+    let m: RegExpExecArray | null;
+    while ((m = sectionPattern.exec(content)) !== null) {
+      headings.push({ name: m[1].trim().toLowerCase(), index: m.index });
+    }
+
+    const getSection = (keyword: string): string => {
+      const h = headings.find((h) => h.name.includes(keyword));
+      if (!h) return "";
+      const start = content.indexOf("\n", h.index) + 1;
+      // Find the next heading that is NOT this one
+      const next = headings.find((h2) => h2.index > h.index);
+      const end = next ? next.index : content.length;
+      return content.slice(start, end).trim();
+    };
 
     return {
-      cues: cuesMatch?.[1]?.trim() || "",
-      notes: notesMatch?.[1]?.trim() || "",
-      summary: summaryMatch?.[1]?.trim() || "",
+      cues: getSection("cue"),
+      notes: getSection("note"),
+      summary: getSection("summar"),
     };
   }, [content]);
 

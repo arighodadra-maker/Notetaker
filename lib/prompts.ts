@@ -6,16 +6,18 @@ export type NoteFormat = "cornell" | "bullet" | "flashcards" | "study-guide" | "
 export function getCornellNotesPrompt(transcript: string): string {
   return `You are an expert note-taking assistant. Convert the following lecture transcript into Cornell Notes format.
 
-Cornell Notes Format Requirements:
-- Left Column (Cues): Key questions, terms, concepts, or prompts
-- Right Column (Notes): Detailed explanations, definitions, and information
-- Summary Section: A concise summary at the bottom (2-3 sentences)
+You MUST use exactly these three headings in exactly this order, with no variations:
 
-Format the output using markdown:
-- Use "## Cues" and "## Notes" headers
-- Use "### Summary" for the summary section
-- Use tables or two-column layout if helpful
-- Bold important terms
+## Cues
+(key questions, terms, and prompts — one per line as a bullet list)
+
+## Notes
+(detailed explanations matching each cue — use bullet points and bold key terms)
+
+## Summary
+(2-3 sentence summary of the entire content)
+
+Do not add any other top-level headings. Do not rename the sections.
 
 Transcript:
 ${transcript}
