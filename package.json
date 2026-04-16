@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "cp node_modules/pdfjs-dist/build/pdf.worker.min.js public/pdf.worker.min.js && next build",
     "start": "next start",
     "lint": "next lint"
   },
@@ -14,7 +14,7 @@
     "next": "^14.2.0",
     "officeparser": "^4.2.0",
     "openai": "^4.52.0",
-    "pdfjs-dist": "^5.6.205",
+    "pdfjs-dist": "^3.11.174",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "react-markdown": "^9.0.1",

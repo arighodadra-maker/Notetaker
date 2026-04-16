@@ -6,8 +6,8 @@
 export async function extractTextFromPdf(file: File): Promise<string> {
   const pdfjsLib = await import("pdfjs-dist");
 
-  // Use the CDN worker so we don't bundle it
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+  // Serve the worker from /public so it's always available without CDN
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
 
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
