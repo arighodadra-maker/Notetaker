@@ -48,12 +48,7 @@ export default function LandingPage({ onStart }: LandingPageProps) {
     <div className="min-h-screen flex flex-col bg-white dark:bg-gray-950 text-gray-900 dark:text-white transition-colors duration-300">
       {/* Nav */}
       <nav className="flex items-center justify-between px-8 py-5">
-        <span
-          className="text-sm tracking-tight text-gray-900 dark:text-white"
-          style={{ fontFamily: "var(--font-serif)", fontStyle: "italic" }}
-        >
-          ClassCapsule
-        </span>
+        <span className="text-sm tracking-tight text-gray-900 dark:text-white" style={{ fontFamily: "var(--font-serif)", fontStyle: "italic" }}>ClassCapsule</span>
         <button
           onClick={toggleTheme}
           className="p-2 rounded-md text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"

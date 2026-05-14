@@ -94,12 +94,7 @@ export default function AuthPage({ onBack }: AuthPageProps) {
           Back
         </button>
 
-        <span
-          className="text-sm tracking-tight"
-          style={{ fontFamily: "var(--font-serif)", fontStyle: "italic" }}
-        >
-          ClassCapsule
-        </span>
+        <span className="text-sm tracking-tight" style={{ fontFamily: "var(--font-serif)", fontStyle: "italic" }}>ClassCapsule</span>
 
         <button
           onClick={toggleTheme}

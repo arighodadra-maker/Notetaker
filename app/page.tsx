@@ -14,6 +14,7 @@ import VideoUpload from "@/components/VideoUpload";
 import SessionDrawer from "@/components/SessionDrawer";
 import { extractAudio } from "@/lib/audioExtractor";
 import { extractTextFromPdf } from "@/lib/pdfExtractor";
+import { upload } from "@vercel/blob/client";
 import { useAuth } from "@/components/AuthProvider";
 import { saveSession, Session } from "@/lib/sessions";
 
@@ -123,12 +124,23 @@ export default function Home() {
             // Extract client-side — no upload, no size limit
             transcriptText = await extractTextFromPdf(selectedFile);
           } else {
-            // Word / PowerPoint — server-side (files are typically small)
-            const fd = new FormData();
-            fd.append("file", selectedFile);
-            const res = await fetch("/api/extract", { method: "POST", body: fd });
+            // Word / PowerPoint — upload to Vercel Blob first to bypass the
+            // 4 MB serverless body limit, then extract server-side
+            const blob = await upload(selectedFile.name, selectedFile, {
+              access: "public",
+              handleUploadUrl: "/api/upload",
+            });
+            const res = await fetch("/api/extract", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                blobUrl: blob.url,
+                fileName: selectedFile.name,
+                mimeType: selectedFile.type,
+              }),
+            });
             const data = await res.json().catch(() => ({}));
-            if (!res.ok) throw new Error(data.error || (res.status === 413 ? "File too large (max ~4 MB). Try pasting the text directly." : "Failed to extract text"));
+            if (!res.ok) throw new Error(data.error || "Failed to extract text");
             transcriptText = data.transcript;
           }
           transcriptCache.current.set(key, transcriptText);

@@ -1,46 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
-import { extractTextFromFile } from "@/lib/fileExtractor";
+import { del } from "@vercel/blob";
+import { extractTextFromBuffer } from "@/lib/fileExtractor";
 
 export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   try {
-    // Parse FormData from the request
-    const formData = await request.formData();
-    const file = formData.get("file") as File | null;
+    const { blobUrl, fileName, mimeType } = await request.json();
 
-    // Validate that a file was provided
-    if (!file) {
+    if (!blobUrl || !fileName) {
       return NextResponse.json(
-        { error: "No file provided. Please upload a document." },
+        { error: "Missing required fields." },
         { status: 400 }
       );
     }
 
-    // Validate that it's actually a File object
-    if (!(file instanceof File)) {
+    // Fetch the file from Vercel Blob storage
+    const response = await fetch(blobUrl);
+    if (!response.ok) {
       return NextResponse.json(
-        { error: "Invalid file upload. Please try again." },
+        { error: "Failed to fetch uploaded file." },
         { status: 400 }
       );
     }
 
-    // Extract text from the uploaded file
-    const transcript = await extractTextFromFile(file);
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
-    // Return the extracted text
+    // Extract text from the buffer
+    const transcript = await extractTextFromBuffer(buffer, fileName, mimeType);
+
+    // Clean up the blob after extraction (best-effort)
+    await del(blobUrl).catch(() => {});
+
     return NextResponse.json({ transcript });
   } catch (error) {
-    // Handle known errors with user-friendly messages
     if (error instanceof Error) {
-      // These are validation or extraction errors with user-friendly messages
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
-
-    // Handle unexpected errors
     return NextResponse.json(
       {
         error:

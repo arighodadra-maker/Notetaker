@@ -330,9 +330,7 @@ export default function Dashboard({ onNewNote, onLoadSession }: DashboardProps) 
     <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-white transition-colors duration-200 flex flex-col">
       {/* Nav */}
       <nav className="border-b border-gray-100 dark:border-gray-800 px-6 py-4 flex items-center justify-between shrink-0">
-        <span className="text-sm tracking-tight" style={{ fontFamily: "var(--font-serif)", fontStyle: "italic" }}>
-          ClassCapsule
-        </span>
+        <span className="text-sm tracking-tight" style={{ fontFamily: "var(--font-serif)", fontStyle: "italic" }}>ClassCapsule</span>
         <div className="flex items-center gap-3">
           <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:block">{user?.email}</span>
           <button onClick={signOut} className="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">

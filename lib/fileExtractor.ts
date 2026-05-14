@@ -13,6 +13,51 @@ const SUPPORTED_MIME_TYPES = [
 const SUPPORTED_EXTENSIONS = [".pdf", ".ppt", ".pptx", ".doc", ".docx"];
 
 /**
+ * Extract text from a Buffer (used when file is fetched from Vercel Blob)
+ */
+export async function extractTextFromBuffer(
+  buffer: Buffer,
+  fileName: string,
+  mimeType?: string
+): Promise<string> {
+  const extension = fileName.toLowerCase().match(/\.[^.]+$/)?.[0];
+  if (!extension || !SUPPORTED_EXTENSIONS.includes(extension)) {
+    throw new Error(
+      "Unsupported file type. Please upload PDF, PowerPoint (.ppt, .pptx), or Word (.doc, .docx) documents."
+    );
+  }
+  if (mimeType && !SUPPORTED_MIME_TYPES.includes(mimeType)) {
+    throw new Error("Invalid file format. Please upload a valid document file.");
+  }
+
+  try {
+    const data = await parseOfficeAsync(buffer, {
+      newlineDelimiter: "\n",
+      ignoreNotes: false,
+    });
+    const cleanedText = cleanText(data);
+    if (!cleanedText || cleanedText.trim().length === 0) {
+      throw new Error(
+        "No text found in document. Please upload a file with text content."
+      );
+    }
+    return cleanedText;
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      (error.message.includes("Unsupported file type") ||
+        error.message.includes("No text found") ||
+        error.message.includes("Invalid file format"))
+    ) {
+      throw error;
+    }
+    throw new Error(
+      "Unable to extract text from file. The file may be corrupted or password-protected. Please try a different document or paste text manually."
+    );
+  }
+}
+
+/**
  * Extract text from uploaded document files (PDF, PowerPoint, Word)
  */
 export async function extractTextFromFile(file: File): Promise<string> {
