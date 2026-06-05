@@ -88,7 +88,11 @@ export default function QuizView({ notes }: QuizViewProps) {
     return (
       <div className="py-8 max-w-lg mx-auto">
         <div className="text-center mb-8">
-          <div className="text-5xl mb-3">🎯</div>
+          <div className="flex justify-center mb-3">
+            <svg className="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" />
+            </svg>
+          </div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
             Test your knowledge
           </h3>
@@ -158,10 +162,10 @@ export default function QuizView({ notes }: QuizViewProps) {
   if (quizState === "results") {
     const pct = gradableQuestions.length > 0 ? score / gradableQuestions.length : null;
     const feedback =
-      pct === null ? "Review complete! 📖"
-      : pct === 1 ? "Perfect score! 🎉"
-      : pct >= 0.7 ? "Great job! 👍"
-      : "Keep studying! 📚";
+      pct === null ? "Review complete!"
+      : pct === 1 ? "Perfect score!"
+      : pct >= 0.7 ? "Great job!"
+      : "Keep studying!";
 
     return (
       <div>
@@ -172,7 +176,9 @@ export default function QuizView({ notes }: QuizViewProps) {
               {score}/{gradableQuestions.length}
             </div>
           ) : (
-            <div className="text-3xl mb-1">📖</div>
+            <div className="flex justify-center mb-1">
+                <svg className="h-8 w-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+              </div>
           )}
           <p className="text-gray-600 dark:text-gray-300">{feedback}</p>
           {openEndedQuestions.length > 0 && gradableQuestions.length > 0 && (
@@ -197,7 +203,10 @@ export default function QuizView({ notes }: QuizViewProps) {
                   }`}
                 >
                   <div className="flex items-start gap-2 mb-3">
-                    <span className="text-lg">{isCorrect ? "✅" : "❌"}</span>
+                    {isCorrect
+                      ? <svg className="h-5 w-5 text-green-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      : <svg className="h-5 w-5 text-red-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    }
                     <p className="font-medium text-gray-900 dark:text-white">
                       {qIdx + 1}. {q.question}
                     </p>

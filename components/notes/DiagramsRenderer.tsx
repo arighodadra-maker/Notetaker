@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 interface DiagramsRendererProps {
   content: string; // JSON: { flowchart: string; mindmap: string }
@@ -76,12 +76,12 @@ async function downloadAsPdf(code: string, title: string) {
 }
 
 function DiagramCard({
-  emoji,
+  icon,
   title,
   code,
   fixSyntax,
 }: {
-  emoji: string;
+  icon: ReactNode;
   title: string;
   code: string;
   fixSyntax?: boolean;
@@ -105,7 +105,7 @@ function DiagramCard({
 
   return (
     <div className="w-full border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg p-10 text-center">
-      <div className="text-5xl mb-4">{emoji}</div>
+      <div className="flex justify-center mb-4">{icon}</div>
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{title} Ready</h3>
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
         Download your {title.toLowerCase()} as a PDF to view or share it.
@@ -153,8 +153,8 @@ export default function DiagramsRenderer({ content }: DiagramsRendererProps) {
 
   return (
     <div className="flex flex-col gap-6 w-full">
-      <DiagramCard emoji="🔀" title="Flowchart" code={flowchart} fixSyntax />
-      <DiagramCard emoji="🧠" title="Mind Map" code={mindmap} />
+      <DiagramCard icon={<svg className="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" /></svg>} title="Flowchart" code={flowchart} fixSyntax />
+      <DiagramCard icon={<svg className="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" /></svg>} title="Mind Map" code={mindmap} />
     </div>
   );
 }

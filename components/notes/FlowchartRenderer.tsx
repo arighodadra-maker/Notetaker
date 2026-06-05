@@ -104,7 +104,9 @@ export default function FlowchartRenderer({ content }: FlowchartRendererProps) {
 
   return (
     <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg p-10 text-center">
-      <div className="text-5xl mb-4">🔀</div>
+      <div className="flex justify-center mb-4">
+        <svg className="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" /></svg>
+      </div>
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
         Flowchart Ready
       </h3>
