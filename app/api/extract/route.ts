@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { del } from "@vercel/blob";
 import { extractTextFromBuffer } from "@/lib/fileExtractor";
 
 export const maxDuration = 60;
@@ -29,9 +28,6 @@ export async function POST(request: NextRequest) {
 
     // Extract text from the buffer
     const transcript = await extractTextFromBuffer(buffer, fileName, mimeType);
-
-    // Clean up the blob after extraction (best-effort)
-    await del(blobUrl).catch(() => {});
 
     return NextResponse.json({ transcript });
   } catch (error) {

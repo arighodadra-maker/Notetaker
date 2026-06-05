@@ -14,7 +14,8 @@ import VideoUpload from "@/components/VideoUpload";
 import SessionDrawer from "@/components/SessionDrawer";
 import { extractAudio } from "@/lib/audioExtractor";
 import { extractTextFromPdf } from "@/lib/pdfExtractor";
-import { upload } from "@vercel/blob/client";
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
+import { storage } from "@/lib/firebase";
 import { useAuth } from "@/components/AuthProvider";
 import { saveSession, Session } from "@/lib/sessions";
 
@@ -54,6 +55,8 @@ export default function Home() {
 
   const [loading, setLoading] = useState(false);
   const [extracting, setExtracting] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [transcribing, setTranscribing] = useState(false);
   const [transcribeProgress, setTranscribeProgress] = useState("");
   const [error, setError] = useState("");
@@ -124,21 +127,33 @@ export default function Home() {
             // Extract client-side — no upload, no size limit
             transcriptText = await extractTextFromPdf(selectedFile);
           } else {
-            // Word / PowerPoint — upload to Vercel Blob first to bypass the
-            // 4 MB serverless body limit, then extract server-side
-            const blob = await upload(selectedFile.name, selectedFile, {
-              access: "public",
-              handleUploadUrl: "/api/upload",
+            // Word / PowerPoint — upload to Firebase Storage (bypasses the
+            // 4 MB Vercel body limit), then extract server-side.
+            setExtracting(false);
+            setUploading(true);
+            setUploadProgress(0);
+            const storageRef = ref(storage, `temp-uploads/${Date.now()}-${selectedFile.name}`);
+            const uploadTask = uploadBytesResumable(storageRef, selectedFile);
+            const downloadUrl = await new Promise<string>((resolve, reject) => {
+              uploadTask.on(
+                "state_changed",
+                (snap) => setUploadProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100)),
+                reject,
+                async () => resolve(await getDownloadURL(uploadTask.snapshot.ref)),
+              );
             });
+            setUploading(false);
+            setExtracting(true);
             const res = await fetch("/api/extract", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                blobUrl: blob.url,
+                blobUrl: downloadUrl,
                 fileName: selectedFile.name,
                 mimeType: selectedFile.type,
               }),
             });
+            deleteObject(storageRef).catch(() => {});
             const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(data.error || "Failed to extract text");
             transcriptText = data.transcript;
@@ -196,6 +211,8 @@ export default function Home() {
     } finally {
       setLoading(false);
       setExtracting(false);
+      setUploading(false);
+      setUploadProgress(0);
       setTranscribing(false);
       setTranscribeProgress("");
     }
@@ -252,11 +269,12 @@ export default function Home() {
   };
 
   const isGenerateDisabled =
-    loading || extracting || transcribing ||
+    loading || extracting || uploading || transcribing ||
     (inputMode === "text" ? !transcript.trim() : inputMode === "file" ? !selectedFile : !selectedVideo);
 
   const busyLabel = transcribing
     ? `Transcribing…${transcribeProgress ? ` (${transcribeProgress})` : ""}`
+    : uploading ? `Uploading… ${uploadProgress}%`
     : extracting ? "Extracting text…" : "Generating all formats…";
 
   const isDiagramTab = activeTab === "flowchart" || activeTab === "mindmap" || activeTab === "diagrams";
@@ -340,7 +358,7 @@ export default function Home() {
         <div className={`rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden mb-4 ${toolMode === "view" ? "hidden" : ""}`}>
           <div className="flex border-b border-gray-200 dark:border-gray-800">
             {([{ key: "text", label: "Text" }, { key: "file", label: "Upload file" }, { key: "video", label: "Video" }] as { key: InputMode; label: string }[]).map(({ key, label }) => (
-              <button key={key} onClick={() => handleModeSwitch(key)} disabled={loading || extracting || transcribing}
+              <button key={key} onClick={() => handleModeSwitch(key)} disabled={loading || extracting || uploading || transcribing}
                 className={`px-5 py-3 text-sm font-medium transition-colors disabled:opacity-40 ${inputMode === key ? "text-gray-900 dark:text-white bg-white dark:bg-gray-900 border-b-2 border-blue-500" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 bg-gray-50 dark:bg-gray-900/50"}`}>
                 {label}
               </button>
@@ -348,14 +366,14 @@ export default function Home() {
           </div>
           <div className="bg-white dark:bg-gray-900">
             {inputMode === "text" && (
-              <textarea value={transcript} onChange={(e) => setTranscript(e.target.value)} placeholder="Paste your lecture transcript here…" rows={9} disabled={loading || extracting || transcribing}
+              <textarea value={transcript} onChange={(e) => setTranscript(e.target.value)} placeholder="Paste your lecture transcript here…" rows={9} disabled={loading || extracting || uploading || transcribing}
                 className="w-full px-5 py-4 text-sm bg-transparent resize-y min-h-[200px] placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none disabled:opacity-50" />
             )}
             {inputMode === "file" && (
-              <div className="px-5 py-4"><FileUpload onFileSelect={setSelectedFile} disabled={loading || extracting || transcribing} selectedFile={selectedFile} /></div>
+              <div className="px-5 py-4"><FileUpload onFileSelect={setSelectedFile} disabled={loading || extracting || uploading || transcribing} selectedFile={selectedFile} /></div>
             )}
             {inputMode === "video" && (
-              <div className="px-5 py-4"><VideoUpload onFileSelect={setSelectedVideo} disabled={loading || extracting || transcribing} selectedFile={selectedVideo} /></div>
+              <div className="px-5 py-4"><VideoUpload onFileSelect={setSelectedVideo} disabled={loading || extracting || uploading || transcribing} selectedFile={selectedVideo} /></div>
             )}
           </div>
         </div>
@@ -363,13 +381,13 @@ export default function Home() {
         {/* Generate — hidden in view mode */}
         <button onClick={handleGenerate} disabled={isGenerateDisabled} style={{ display: toolMode === "view" ? "none" : undefined }}
           className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed text-white text-sm font-semibold py-3 px-6 rounded-xl transition-colors mb-10">
-          {(loading || extracting || transcribing) && (
+          {(loading || extracting || uploading || transcribing) && (
             <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
             </svg>
           )}
-          {loading || extracting || transcribing ? busyLabel : "Generate"}
+          {loading || extracting || uploading || transcribing ? busyLabel : "Generate"}
         </button>
 
         {/* Output */}

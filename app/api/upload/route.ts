@@ -16,7 +16,10 @@ export async function POST(request: Request) {
         ],
         maximumSizeInBytes: 100 * 1024 * 1024, // 100 MB
       }),
-      onUploadCompleted: async () => {},
+      // No onUploadCompleted — omitting it prevents Vercel Blob from embedding
+      // a callbackUrl in the token, so the CDN won't make a server-to-server
+      // webhook call. Without this, local dev hangs at 99% because the CDN
+      // can't reach localhost. Cleanup is handled in /api/extract instead.
     });
     return NextResponse.json(jsonResponse);
   } catch (error) {

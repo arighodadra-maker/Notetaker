@@ -234,7 +234,7 @@ export function getQuizPrompt(
 
   const typeSchemas: Record<string, string> = {
     "multiple-choice": `Each question must have:
-  "type": "multiple-choice", "options": ["A","B","C","D"] (exactly 4), "correctIndex": 0-3, "explanation": "..."`,
+  "type": "multiple-choice", "options": ["Full text of option 1", "Full text of option 2", "Full text of option 3", "Full text of option 4"] (exactly 4 answer choices written out in full), "correctIndex": 0-3, "explanation": "..."`,
 
     "true-false": `Each question must have:
   "type": "true-false", "options": ["True","False"], "correctIndex": 0 or 1, "explanation": "..."`,
@@ -243,7 +243,7 @@ export function getQuizPrompt(
   "type": "open-ended", "modelAnswer": "A thorough sample answer (2-4 sentences)", "explanation": "Key points the answer should include."`,
 
     mixed: `Distribute questions evenly across all three types. Each question must include a "type" field set to one of "multiple-choice", "true-false", or "open-ended".
-- multiple-choice: "options": ["A","B","C","D"], "correctIndex": 0-3, "explanation": "..."
+- multiple-choice: "options": ["Full text of option 1", "Full text of option 2", "Full text of option 3", "Full text of option 4"], "correctIndex": 0-3, "explanation": "..."
 - true-false: "options": ["True","False"], "correctIndex": 0 or 1, "explanation": "..."
 - open-ended: "modelAnswer": "...", "explanation": "Key points to include."`,
   };
