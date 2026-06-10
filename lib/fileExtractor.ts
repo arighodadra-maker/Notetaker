@@ -34,6 +34,7 @@ export async function extractTextFromBuffer(
     const data = await parseOfficeAsync(buffer, {
       newlineDelimiter: "\n",
       ignoreNotes: false,
+      tempFilesLocation: "/tmp",
     });
     const cleanedText = cleanText(data);
     if (!cleanedText || cleanedText.trim().length === 0) {
