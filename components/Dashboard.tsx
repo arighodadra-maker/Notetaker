@@ -22,6 +22,7 @@ import { useAuth } from "@/components/AuthProvider";
 interface DashboardProps {
   onNewNote: () => void;
   onLoadSession: (session: Session) => void;
+  onOpenProfile: () => void;
 }
 
 // ── Color helpers ─────────────────────────────────────────────────────────────
@@ -163,7 +164,7 @@ function MoveModal({ session, subjects, onMove, onClose }: MoveModalProps) {
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
-export default function Dashboard({ onNewNote, onLoadSession }: DashboardProps) {
+export default function Dashboard({ onNewNote, onLoadSession, onOpenProfile }: DashboardProps) {
   const { theme, toggleTheme } = useTheme();
   const { user, signOut } = useAuth();
 
@@ -377,6 +378,17 @@ export default function Dashboard({ onNewNote, onLoadSession }: DashboardProps) 
                 <span className="text-[10px] text-gray-400 dark:text-gray-600">{sessions.length}</span>
               )}
             </button>
+
+            {/* Learning Profile */}
+            <button
+              onClick={onOpenProfile}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors mt-0.5"
+            >
+              <svg className="h-3.5 w-3.5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              Learning Profile
+            </button>
           </div>
 
           {/* Subjects */}
@@ -516,7 +528,7 @@ export default function Dashboard({ onNewNote, onLoadSession }: DashboardProps) 
         </aside>
 
         {/* Main */}
-        <main className="flex-1 min-w-0 px-8 py-8 overflow-y-auto">
+        <main className="flex-1 min-w-0 px-6 py-5 overflow-y-auto">
           {/* Header */}
           <div className="flex items-start justify-between mb-6">
             <div>

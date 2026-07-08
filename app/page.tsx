@@ -10,6 +10,7 @@ import { useTheme } from "@/components/ThemeProvider";
 import LandingPage from "@/components/LandingPage";
 import AuthPage from "@/components/AuthPage";
 import Dashboard from "@/components/Dashboard";
+import LearningProfilePage from "@/components/LearningProfile/LearningProfilePage";
 import VideoUpload from "@/components/VideoUpload";
 import SessionDrawer from "@/components/SessionDrawer";
 import { extractAudio } from "@/lib/audioExtractor";
@@ -42,7 +43,7 @@ export default function Home() {
   const { theme, toggleTheme } = useTheme();
   const { user, authLoading, signOut } = useAuth();
   const [started, setStarted] = useState(false);
-  const [view, setView] = useState<"dashboard" | "tool">("dashboard");
+  const [view, setView] = useState<"dashboard" | "tool" | "learning-profile">("dashboard");
 
   const [inputMode, setInputMode] = useState<InputMode>("text");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -283,6 +284,10 @@ export default function Home() {
   if (authLoading) return null;
   if (!started) return <LandingPage onStart={() => setStarted(true)} />;
   if (!user) return <AuthPage onBack={() => setStarted(false)} />;
+  if (view === "learning-profile") return (
+    <LearningProfilePage onBack={() => setView("dashboard")} />
+  );
+
   if (view === "dashboard") return (
     <Dashboard
       onNewNote={() => {
@@ -291,6 +296,7 @@ export default function Home() {
         setToolMode("create"); setView("tool");
       }}
       onLoadSession={(session) => { handleLoadSession(session); setView("tool"); }}
+      onOpenProfile={() => setView("learning-profile")}
     />
   );
 
@@ -331,9 +337,9 @@ export default function Home() {
         </div>
       </nav>
 
-      <main className={`mx-auto px-6 py-10 transition-all duration-300 ${activeTab === "diagrams" ? "max-w-5xl" : "max-w-2xl"}`}>
+      <main className={`mx-auto px-6 py-6 transition-all duration-300 ${activeTab === "diagrams" ? "max-w-5xl" : "max-w-2xl"}`}>
         {/* Hero */}
-        <div className="mb-8">
+        <div className="mb-5">
           <h1 className="text-2xl tracking-tight mb-1" style={{ fontFamily: "var(--font-serif)", fontWeight: 400 }}>Generate notes</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">Paste a transcript or upload a file — all formats generated at once.</p>
         </div>
@@ -380,7 +386,7 @@ export default function Home() {
 
         {/* Generate — hidden in view mode */}
         <button onClick={handleGenerate} disabled={isGenerateDisabled} style={{ display: toolMode === "view" ? "none" : undefined }}
-          className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed text-white text-sm font-semibold py-3 px-6 rounded-xl transition-colors mb-10">
+          className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed text-white text-sm font-semibold py-3 px-6 rounded-xl transition-colors mb-6">
           {(loading || extracting || uploading || transcribing) && (
             <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -484,7 +490,11 @@ export default function Home() {
             {/* Tab content */}
             <div className="bg-white dark:bg-gray-900">
               {activeTab === "quiz" ? (
-                <QuizView notes={richNotes} />
+                <QuizView
+                  notes={richNotes}
+                  format={richNotesFormat !== "diagrams" ? richNotesFormat : undefined}
+                  userId={user?.uid}
+                />
               ) : activeTab === "calendar" ? (
                 <div className="p-5">
                   <CalendarView notes={richNotes} format={richNotesFormat} />
@@ -497,11 +507,11 @@ export default function Home() {
                   autoFocus
                 />
               ) : activeNotes ? (
-                <div className={activeTab === "diagrams" ? "" : "p-5 overflow-x-auto"}>
+                <div className="overflow-x-auto">
                   <MarkdownRenderer content={activeNotes} format={activeTab as NoteFormat} />
                 </div>
               ) : (
-                <div className="flex items-center justify-center py-12">
+                <div className="flex items-center justify-center py-8">
                   {loading ? (
                     <div className="flex items-center gap-2 text-sm text-gray-400">
                       <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>

@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { QuizQuestion, QuizMode } from "@/lib/types";
+import { saveQuizResult, TrackableFormat } from "@/lib/learningProfile";
 
 interface QuizViewProps {
   notes: string;
+  format?: TrackableFormat;
+  userId?: string;
 }
 
 type QuizState = "idle" | "loading" | "taking" | "results";
@@ -16,7 +19,7 @@ const MODES: { value: QuizMode; label: string; description: string }[] = [
   { value: "mixed", label: "Mixed", description: "All question types combined" },
 ];
 
-export default function QuizView({ notes }: QuizViewProps) {
+export default function QuizView({ notes, format, userId }: QuizViewProps) {
   const [quizState, setQuizState] = useState<QuizState>("idle");
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   // For MC/T-F: stores selected option index. For open-ended: stores typed text.
@@ -26,12 +29,43 @@ export default function QuizView({ notes }: QuizViewProps) {
   const [mode, setMode] = useState<QuizMode>("multiple-choice");
   const [attempt, setAttempt] = useState(0);
 
+  // Learning profile tracking
+  const startTimeRef = useRef<number>(0);
+  const [elapsedMs, setElapsedMs] = useState(0);
+  const [hoveredStar, setHoveredStar] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [savedToProfile, setSavedToProfile] = useState(false);
+  const [saveError, setSaveError] = useState("");
+
+  const handleSaveToProfile = async (confidence: number) => {
+    if (!userId || !format || !gradableQuestions.length) return;
+    setSaving(true);
+    setSaveError("");
+    try {
+      await saveQuizResult(userId, {
+        format,
+        score: gradableQuestions.length > 0 ? score / gradableQuestions.length : 0,
+        totalQuestions: gradableQuestions.length,
+        correctAnswers: score,
+        timeMs: elapsedMs,
+        confidenceRating: confidence,
+      });
+      setSavedToProfile(true);
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : "Failed to save result");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const generateQuiz = async () => {
     const nextAttempt = attempt + 1;
     setAttempt(nextAttempt);
     setQuizState("loading");
     setError("");
     setAnswers({});
+    setSavedToProfile(false);
+    setSaveError("");
 
     try {
       const response = await fetch("/api/quiz", {
@@ -48,6 +82,7 @@ export default function QuizView({ notes }: QuizViewProps) {
 
       setQuestions(data.questions);
       setQuizState("taking");
+      startTimeRef.current = Date.now();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate quiz");
       setQuizState("idle");
@@ -275,6 +310,70 @@ export default function QuizView({ notes }: QuizViewProps) {
           </div>
         )}
 
+        {/* Learning Profile: confidence rating */}
+        {format && userId && gradableQuestions.length > 0 && (
+          <div className="mt-6 border-t border-gray-100 dark:border-gray-800 pt-5">
+            {!savedToProfile ? (
+              <div className="text-center">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  How confident do you feel?
+                </p>
+                <div className="flex justify-center gap-1">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => handleSaveToProfile(n)}
+                      disabled={saving}
+                      onMouseEnter={() => setHoveredStar(n)}
+                      onMouseLeave={() => setHoveredStar(0)}
+                      className="p-1.5 rounded-lg transition-colors disabled:opacity-40"
+                      aria-label={`${n} star${n !== 1 ? "s" : ""}`}
+                    >
+                      <svg
+                        className={`h-6 w-6 transition-colors ${
+                          n <= hoveredStar
+                            ? "text-amber-400"
+                            : "text-gray-300 dark:text-gray-600 hover:text-amber-400"
+                        }`}
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                      >
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                      </svg>
+                    </button>
+                  ))}
+                </div>
+                {saving && (
+                  <p className="text-xs text-gray-400 mt-2">Saving…</p>
+                )}
+                {saveError && (
+                  <p className="text-xs text-red-500 mt-2">{saveError}</p>
+                )}
+                <p className="text-[11px] text-gray-400 dark:text-gray-600 mt-2">
+                  Saves to your Learning Profile
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-green-600 dark:text-green-400 flex items-center justify-center gap-1.5">
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                Saved to Learning Profile
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="flex flex-col items-center gap-3 mt-6">
           <div className="flex flex-wrap items-center justify-center gap-4">
             <Controls />
@@ -373,7 +472,10 @@ export default function QuizView({ notes }: QuizViewProps) {
           {Object.keys(answers).filter((k) => answers[Number(k)] !== "").length}/{questions.length} answered
         </p>
         <button
-          onClick={() => setQuizState("results")}
+          onClick={() => {
+            setElapsedMs(startTimeRef.current ? Date.now() - startTimeRef.current : 0);
+            setQuizState("results");
+          }}
           disabled={!allAnswered}
           className="px-6 py-3 bg-primary hover:bg-blue-600 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors"
         >

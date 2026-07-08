@@ -47,7 +47,7 @@ export default function LandingPage({ onStart }: LandingPageProps) {
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-gray-950 text-gray-900 dark:text-white transition-colors duration-300">
       {/* Nav */}
-      <nav className="flex items-center justify-between px-8 py-5">
+      <nav className="flex items-center justify-between px-6 py-4">
         <span className="text-sm tracking-tight text-gray-900 dark:text-white" style={{ fontFamily: "var(--font-serif)", fontStyle: "italic" }}>ClassCapsule</span>
         <button
           onClick={toggleTheme}
@@ -75,7 +75,7 @@ export default function LandingPage({ onStart }: LandingPageProps) {
       </nav>
 
       {/* Hero */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 py-12 relative">
+      <main className="flex-1 flex flex-col items-center justify-center px-6 py-8 relative">
         {/* Dot grid texture */}
         <div
           className="absolute inset-0 pointer-events-none"
@@ -168,7 +168,7 @@ export default function LandingPage({ onStart }: LandingPageProps) {
 
       {/* Feature strip */}
       <section
-        className="border-t border-gray-100 dark:border-gray-800 px-8 py-10 anim-fade-up"
+        className="border-t border-gray-100 dark:border-gray-800 px-6 py-6 anim-fade-up"
         style={{ animationDelay: "440ms" }}
       >
         <div className="max-w-3xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6">
