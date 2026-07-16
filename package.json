@@ -9,8 +9,16 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@tiptap/extension-color": "^3.28.0",
+    "@tiptap/extension-highlight": "^3.28.0",
+    "@tiptap/extension-text-style": "^3.28.0",
+    "@tiptap/extension-underline": "^3.28.0",
+    "@tiptap/pm": "^3.28.0",
+    "@tiptap/react": "^3.28.0",
+    "@tiptap/starter-kit": "^3.28.0",
     "@vercel/blob": "^2.3.3",
     "firebase": "^12.11.0",
+    "marked": "^18.0.6",
     "mermaid": "^11.13.0",
     "next": "^14.2.0",
     "officeparser": "^4.2.0",

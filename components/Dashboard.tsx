@@ -189,6 +189,9 @@ export default function Dashboard({ onNewNote, onLoadSession, onOpenProfile }: D
   const [newUnitName, setNewUnitName] = useState("");
   const unitInputRef = useRef<HTMLInputElement>(null);
 
+  // Mobile sidebar drawer
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
   useEffect(() => {
     if (!user) return;
     loadSessions(user.uid)
@@ -330,15 +333,27 @@ export default function Dashboard({ onNewNote, onLoadSession, onOpenProfile }: D
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-white transition-colors duration-200 flex flex-col">
       {/* Nav */}
-      <nav className="border-b border-gray-100 dark:border-gray-800 px-6 py-4 flex items-center justify-between shrink-0">
-        <span className="text-sm tracking-tight" style={{ fontFamily: "var(--font-serif)", fontStyle: "italic" }}>ClassCapsule</span>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:block">{user?.email}</span>
+      <nav className="border-b border-gray-100 dark:border-gray-800 px-4 sm:px-6 py-3.5 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2">
+          {/* Hamburger — mobile only */}
+          <button
+            onClick={() => setMobileSidebarOpen(true)}
+            className="md:hidden p-1.5 -ml-1 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            aria-label="Open menu"
+          >
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+          <span className="text-sm tracking-tight" style={{ fontFamily: "var(--font-serif)", fontStyle: "italic" }}>ClassCapsule</span>
+        </div>
+        <div className="flex items-center gap-2.5">
+          <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:block truncate max-w-[160px]">{user?.email}</span>
           <button onClick={signOut} className="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
             Sign out
           </button>
           <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
-          <button onClick={toggleTheme} className="p-2 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Toggle theme">
+          <button onClick={toggleTheme} className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Toggle theme">
             {theme === "light" ? (
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
             ) : (
@@ -353,15 +368,42 @@ export default function Dashboard({ onNewNote, onLoadSession, onOpenProfile }: D
         </div>
       </nav>
 
-      <div className="flex flex-1 min-h-0">
-        {/* Sidebar */}
-        <aside className="w-52 shrink-0 border-r border-gray-100 dark:border-gray-800 flex flex-col overflow-y-auto">
+      <div className="flex flex-1 min-h-0 relative">
+        {/* Mobile backdrop */}
+        {mobileSidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/40 z-30 md:hidden"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+        )}
+
+        {/* Sidebar — slides in on mobile, static on desktop */}
+        <aside className={`
+          fixed top-0 left-0 bottom-0 z-40 w-72 flex flex-col overflow-y-auto
+          bg-white dark:bg-gray-950 border-r border-gray-100 dark:border-gray-800 shadow-xl
+          transition-transform duration-200 ease-in-out
+          md:static md:w-52 md:z-auto md:shadow-none md:translate-x-0 md:shrink-0
+          ${mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+        `}>
+          {/* Mobile drawer header */}
+          <div className="flex items-center justify-between px-4 py-3.5 border-b border-gray-100 dark:border-gray-800 md:hidden">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Library</span>
+            <button
+              onClick={() => setMobileSidebarOpen(false)}
+              className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+
           <div className="px-3 pt-5 pb-2">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-600 px-2 mb-1">Library</p>
 
             {/* All Notes */}
             <button
-              onClick={() => { setSelectedSubjectId(null); setSelectedUnitId(null); }}
+              onClick={() => { setSelectedSubjectId(null); setSelectedUnitId(null); setMobileSidebarOpen(false); }}
               className={`w-full flex items-center justify-between px-2 py-1.5 rounded-md text-xs transition-colors ${
                 !selectedSubjectId
                   ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-medium"
@@ -381,7 +423,7 @@ export default function Dashboard({ onNewNote, onLoadSession, onOpenProfile }: D
 
             {/* Learning Profile */}
             <button
-              onClick={onOpenProfile}
+              onClick={() => { onOpenProfile(); setMobileSidebarOpen(false); }}
               className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors mt-0.5"
             >
               <svg className="h-3.5 w-3.5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -404,7 +446,7 @@ export default function Dashboard({ onNewNote, onLoadSession, onOpenProfile }: D
                   {/* Subject row */}
                   <div className="group flex items-center">
                     <button
-                      onClick={() => { toggleExpand(subj.id); setSelectedSubjectId(subj.id); setSelectedUnitId(null); }}
+                      onClick={() => { toggleExpand(subj.id); setSelectedSubjectId(subj.id); setSelectedUnitId(null); setMobileSidebarOpen(false); }}
                       className={`flex-1 flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors min-w-0 ${
                         selectedSubjectId === subj.id && !selectedUnitId
                           ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-medium"
@@ -437,7 +479,7 @@ export default function Dashboard({ onNewNote, onLoadSession, onOpenProfile }: D
                       {subj.units.map((unit) => (
                         <div key={unit.id} className="group flex items-center">
                           <button
-                            onClick={() => { setSelectedSubjectId(subj.id); setSelectedUnitId(unit.id); }}
+                            onClick={() => { setSelectedSubjectId(subj.id); setSelectedUnitId(unit.id); setMobileSidebarOpen(false); }}
                             className={`flex-1 flex items-center gap-2 pl-3 pr-2 py-1 rounded-md text-xs transition-colors min-w-0 ${
                               selectedUnitId === unit.id && selectedSubjectId === subj.id
                                 ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-medium"
@@ -528,7 +570,7 @@ export default function Dashboard({ onNewNote, onLoadSession, onOpenProfile }: D
         </aside>
 
         {/* Main */}
-        <main className="flex-1 min-w-0 px-6 py-5 overflow-y-auto">
+        <main className="flex-1 min-w-0 px-4 sm:px-6 py-4 sm:py-5 overflow-y-auto">
           {/* Header */}
           <div className="flex items-start justify-between mb-6">
             <div>

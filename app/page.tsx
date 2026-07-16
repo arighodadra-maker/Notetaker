@@ -18,6 +18,7 @@ import { extractTextFromPdf } from "@/lib/pdfExtractor";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { storage } from "@/lib/firebase";
 import { useAuth } from "@/components/AuthProvider";
+import RichTextEditor from "@/components/RichTextEditor";
 import { saveSession, Session } from "@/lib/sessions";
 
 type InputMode = "text" | "file" | "video";
@@ -305,7 +306,7 @@ export default function Home() {
       <SessionDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} userId={user.uid} onLoad={(s) => { handleLoadSession(s); }} />
 
       {/* Nav */}
-      <nav className="border-b border-gray-100 dark:border-gray-800 px-6 py-4 flex items-center justify-between">
+      <nav className="border-b border-gray-100 dark:border-gray-800 px-4 sm:px-6 py-3.5 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button onClick={() => setView("dashboard")} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 5l-7 7 7 7" /></svg>
@@ -337,7 +338,7 @@ export default function Home() {
         </div>
       </nav>
 
-      <main className={`mx-auto px-6 py-6 transition-all duration-300 ${activeTab === "diagrams" ? "max-w-5xl" : "max-w-2xl"}`}>
+      <main className={`mx-auto px-3 sm:px-6 py-4 sm:py-6 transition-all duration-300 ${activeTab === "diagrams" ? "max-w-5xl" : "max-w-2xl"}`}>
         {/* Hero */}
         <div className="mb-5">
           <h1 className="text-2xl tracking-tight mb-1" style={{ fontFamily: "var(--font-serif)", fontWeight: 400 }}>Generate notes</h1>
@@ -441,7 +442,7 @@ export default function Home() {
 
               {/* Actions row */}
               {activeTab !== "quiz" && (
-                <div className="flex items-center justify-end gap-2 px-4 py-2">
+                <div className="flex items-center justify-end gap-1.5 px-3 sm:px-4 py-2 flex-wrap">
                   {editing ? (
                     <>
                       <button
@@ -463,17 +464,9 @@ export default function Home() {
                   ) : (
                     <>
                       {!isDiagramTab && activeTab !== "calendar" && activeNotes && (
-                        <>
-                          <button
-                            onClick={() => { setEditBuffer(activeNotes); setEditing(true); }}
-                            className="px-3 py-1.5 rounded-md text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                          >
-                            Edit
-                          </button>
-                          <button onClick={handleCopy} className="px-3 py-1.5 rounded-md text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                            {copied ? "Copied" : "Copy"}
-                          </button>
-                        </>
+                        <button onClick={handleCopy} className="px-3 py-1.5 rounded-md text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                          {copied ? "Copied" : "Copy"}
+                        </button>
                       )}
                       {(activeTab === "calendar" ? !!richNotes : !!activeNotes) && (
                         <button onClick={handleSave} disabled={saving || saved} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-blue-500 hover:bg-blue-600 text-white disabled:opacity-60 disabled:cursor-not-allowed transition-colors">
@@ -500,14 +493,16 @@ export default function Home() {
                   <CalendarView notes={richNotes} format={richNotesFormat} />
                 </div>
               ) : editing ? (
-                <textarea
-                  value={editBuffer}
-                  onChange={(e) => setEditBuffer(e.target.value)}
-                  className="w-full px-5 py-4 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 resize-y min-h-[400px] focus:outline-none font-mono leading-relaxed"
-                  autoFocus
+                <RichTextEditor
+                  content={editBuffer}
+                  onChange={setEditBuffer}
                 />
               ) : activeNotes ? (
-                <div className="overflow-x-auto">
+                <div
+                  className={`overflow-x-auto${!isDiagramTab ? " cursor-text hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors" : ""}`}
+                  onClick={!isDiagramTab ? () => { setEditBuffer(activeNotes); setEditing(true); } : undefined}
+                  title={!isDiagramTab ? "Click to edit" : undefined}
+                >
                   <MarkdownRenderer content={activeNotes} format={activeTab as NoteFormat} />
                 </div>
               ) : (

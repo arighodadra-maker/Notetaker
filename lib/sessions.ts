@@ -63,8 +63,11 @@ const SKIP_WORDS = new Set([
 /** Derive a short title from the notes content. */
 function makeTitle(format: NoteFormat, notes: string): string {
   const label = FORMAT_LABELS[format];
-  const firstLine = notes
-    .split("\n")
+  const isHtml = notes.trimStart().startsWith("<");
+  const lines = isHtml
+    ? notes.replace(/<[^>]+>/g, "\n").replace(/&[^;]+;/g, "").split("\n")
+    : notes.split("\n");
+  const firstLine = lines
     .map((l) => l.replace(/^#+\s*/, "").replace(/[*_`]/g, "").trim())
     .find((l) => l.length > 2 && !SKIP_WORDS.has(l.toLowerCase()));
   const snippet = firstLine ? ` · ${firstLine.slice(0, 40)}` : "";

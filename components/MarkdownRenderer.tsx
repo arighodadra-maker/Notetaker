@@ -18,6 +18,16 @@ export default function MarkdownRenderer({
   content,
   format,
 }: MarkdownRendererProps) {
+  // After WYSIWYG editing, content is stored as HTML
+  if (content.trimStart().startsWith("<")) {
+    return (
+      <div
+        className="px-5 py-4 prose prose-sm max-w-none dark:prose-invert"
+        dangerouslySetInnerHTML={{ __html: content }}
+      />
+    );
+  }
+
   switch (format) {
     case "bullet":
       return <BulletNotesRenderer content={content} />;
