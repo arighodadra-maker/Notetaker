@@ -1,7 +1,12 @@
 import { NoteFormat } from "./prompts";
 
-export type QuizQuestionType = "multiple-choice" | "true-false" | "open-ended";
-export type QuizMode = "multiple-choice" | "true-false" | "open-ended" | "mixed";
+export type QuizQuestionType = "multiple-choice" | "true-false" | "open-ended" | "fill-blank" | "matching";
+export type QuizMode = "multiple-choice" | "true-false" | "open-ended" | "fill-blank" | "matching" | "mixed";
+
+export interface MatchingPair {
+  term: string;
+  definition: string;
+}
 
 export interface QuizQuestion {
   id: number;
@@ -12,6 +17,10 @@ export interface QuizQuestion {
   correctIndex?: number;
   // open-ended
   modelAnswer?: string;
+  // fill-blank
+  correctAnswer?: string;
+  // matching
+  matchingPairs?: MatchingPair[];
   explanation: string;
 }
 

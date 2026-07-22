@@ -223,7 +223,7 @@ export function getQuizPrompt(
   notes: string,
   count: number,
   attempt: number,
-  mode: "multiple-choice" | "true-false" | "open-ended" | "mixed"
+  mode: "multiple-choice" | "true-false" | "open-ended" | "fill-blank" | "matching" | "mixed"
 ): string {
   const focusInstructions =
     attempt === 1
@@ -242,18 +242,28 @@ export function getQuizPrompt(
     "open-ended": `Each question must have:
   "type": "open-ended", "modelAnswer": "A thorough sample answer (2-4 sentences)", "explanation": "Key points the answer should include."`,
 
-    mixed: `Distribute questions evenly across all three types. Each question must include a "type" field set to one of "multiple-choice", "true-false", or "open-ended".
+    "fill-blank": `Each question must have:
+  "type": "fill-blank", "question": "A sentence with [BLANK] replacing the key term or phrase", "correctAnswer": "the exact word or short phrase that fills the blank", "explanation": "..."
+  Rules: [BLANK] should replace a specific, unambiguous term. The correct answer must be 1-4 words only.`,
+
+    matching: `Generate exactly 1 matching question with ${count} term-definition pairs. The question must have:
+  "type": "matching", "question": "Match each term to its definition", "matchingPairs": [{"term": "...", "definition": "..."}, ...], "explanation": "Brief overview of why these terms relate"
+  Rules: terms should be concise (1-4 words); definitions should be distinct and 1-2 sentences each. Exactly ${count} pairs.`,
+
+    mixed: `Distribute questions evenly across all types. Each question must include a "type" field set to one of "multiple-choice", "true-false", "open-ended", or "fill-blank".
 - multiple-choice: "options": ["Full text of option 1", "Full text of option 2", "Full text of option 3", "Full text of option 4"], "correctIndex": 0-3, "explanation": "..."
 - true-false: "options": ["True","False"], "correctIndex": 0 or 1, "explanation": "..."
-- open-ended: "modelAnswer": "...", "explanation": "Key points to include."`,
+- open-ended: "modelAnswer": "...", "explanation": "Key points to include."
+- fill-blank: "question": "Sentence with [BLANK]", "correctAnswer": "1-4 word answer", "explanation": "..."`,
   };
 
+  const modeLabel = mode === "mixed" ? "mixed-type" : mode === "matching" ? "matching" : mode;
   return `You are an expert educator creating a quiz based on the following study notes.
 
 Notes:
 ${notes}
 
-Generate exactly ${count} ${mode === "mixed" ? "mixed-type" : mode} quiz questions. Return ONLY a valid JSON object:
+Generate exactly ${mode === "matching" ? "1" : count} ${modeLabel} quiz question${mode === "matching" ? "" : "s"}. Return ONLY a valid JSON object:
 {
   "questions": [
     {
