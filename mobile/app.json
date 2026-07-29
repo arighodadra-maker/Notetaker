@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "ClassCapsule",
+    "slug": "classcapsule",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "scheme": "classcapsule",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.classcapsule.app"
+    },
+    "android": {
+      "package": "com.classcapsule.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#E6F4FE"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-font",
+      [
+        "expo-av",
+        { "microphonePermission": "ClassCapsule needs microphone access to record lectures." }
+      ],
+      [
+        "expo-document-picker",
+        { "iCloudContainerEnvironment": "Production" }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
